@@ -1,12 +1,13 @@
 # Technician Booking Frontend
 
-A sleek and professional frontend application for managing technician bookings, built with **React**, **TypeScript**, and **Material UI**. This application offers an intuitive interface for viewing, searching, and managing bookings, complemented by a real-time chat interface for seamless communication.
+A sleek frontend application for managing technician bookings, built with **React**, **TypeScript**, and **Material UI**. This application offers an intuitive interface for viewing, searching, and managing bookings, complemented by a real-time chat interface for seamless communication.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Technologies](#technologies)
-- [Demo](#demo)
+- [Screenshots](#screenshots)
+- [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
@@ -32,40 +33,49 @@ A sleek and professional frontend application for managing technician bookings, 
 - **Axios**: A promise-based HTTP client for making API requests.
 - **ESLint**: A tool for identifying and reporting on patterns in JavaScript, ensuring code quality.
 
-## Demo
+## Screenshots
 
-![Booking List Screenshot](./src/assets/demo-booking-list.png) 
+![00.png](./src/assets/screenshots/00.png)  
+*Figure 1: Screenshot 00*
 
-*Figure 1: Booking List Interface*
+![01.png](./src/assets/screenshots/01.png)
+*Figure 2: Screenshot 01*
 
-## Installation
+![02.png](./src/assets/screenshots/02.png)  
+*Figure 3: Screenshot 02*
 
-### Prerequisites
+![03.png](./src/assets/screenshots/03.png)
+*Figure 4: Screenshot 03*
 
-- **Node.js**: Ensure you have Node.js installed. Download it from [here](https://nodejs.org/).
-- **npm** or **yarn**: Package managers for installing dependencies.
+![04.png](./src/assets/screenshots/04.png)
+*Figure 5: Screenshot 04*
 
-### Steps
+![05.png](./src/assets/screenshots/05.png)
+*Figure 6: Screenshot 05* 
+
+![06.png](./src/assets/screenshots/06.png)
+*Figure 7: Screenshot 06*
+
+## Prerequisites
+
+- **Node.js**: Ensure you have Node.js (version 18 or above) installed. You can download it from [here](https://nodejs.org/).
+- **pnpm**: We recommend using pnpm as the package manager for this project. Follow the [installation instructions](https://pnpm.io/installation) to set up pnpm on your system.
+
+## Installation 
 
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/yourusername/technician-booking-frontend.git
+   git clone https://github.com/ericsonwillians/technician-booking-frontend.git
    cd technician-booking-frontend
    ```
 
 2. **Install Dependencies**
 
-   Using npm:
+   Using pnpm (recommended):
 
    ```bash
-   npm install
-   ```
-
-   Or using yarn:
-
-   ```bash
-   yarn install
+   pnpm install
    ```
 
 3. **Configure Environment Variables**
@@ -78,21 +88,7 @@ A sleek and professional frontend application for managing technician bookings, 
 
 4. **Start the Development Server**
 
-   Using npm:
-
-   ```bash
-   npm run dev
-   ```
-
-   Or using yarn:
-
-   ```bash
-   yarn dev
-   ```
-
-   Or using pnpm (You should ;)):
-
-   ```bash
+   ```bash  
    pnpm dev
    ```
 
@@ -102,40 +98,52 @@ A sleek and professional frontend application for managing technician bookings, 
 
 - **Viewing Bookings**: Access the booking list to view all technician bookings. Use the search bar to filter bookings based on customer name, technician, or profession.
 - **Theme Toggle**: Click on the theme toggle button in the AppBar to switch between light and dark modes.
-- **Chat Interface**: Utilize the chat interface to communicate with customers or technicians in real-time.
+- **Chat Interface**: Utilize the chat interface to communicate with customers or technicians in real-time.  
 - **Responsive Design**: The layout adapts seamlessly to various screen sizes, ensuring usability across devices.
 
 ## Project Structure
 
 ```
 technician-booking-frontend/
+├── public
+│   └── vite.svg
 ├── README.md
 ├── src
-│   ├── App.css
-│   ├── App.tsx
-│   ├── assets
-│   │   └── react.svg
-│   ├── components
-│   │   ├── BookingList.tsx
-│   │   └── ChatInterface
-│   │       ├── BookingEntry.tsx
-│   │       ├── index.tsx
-│   │       ├── SystemMessage.tsx
-│   │       └── UserMessage.tsx
-│   ├── index.css
-│   ├── main.tsx
-│   ├── services
-│   │   └── bookingApi.ts
-│   └── vite-env.d.ts
+│   ├── App.css
+│   ├── App.tsx
+│   ├── assets
+│   │   └── screenshots
+│   │       ├── 00.png
+│   │       ├── 01.png
+│   │       ├── 02.png
+│   │       ├── 03.png
+│   │       ├── 04.png
+│   │       ├── 05.png  
+│   │       └── 06.png
+│   ├── components
+│   │   ├── BookingAnalytics.tsx
+│   │   └── ChatInterface
+│   │       ├── BookingEntry.tsx
+│   │       ├── index.tsx
+│   │       ├── SystemMessage.tsx
+│   │       └── UserMessage.tsx
+│   ├── index.css 
+│   ├── main.tsx
+│   ├── services
+│   │   └── bookingApi.ts
+│   ├── theme  
+│   │   └── index.ts
+│   └── vite-env.d.ts
 ├── tsconfig.app.json
 ├── tsconfig.json
-├── tsconfig.node.json
+├── tsconfig.node.json  
 └── vite.config.ts
 ```
 
-- **components/**: Contains reusable React components like `BookingList`, `BookingEntry`, and `ChatInterface`.
-- **services/**: Contains API service files, such as `bookingApi.ts` for interacting with the backend.
-- **assets/**: Contains static assets like images and icons.
+- **components/**: Contains reusable React components like BookingAnalytics, ChatInterface, and related subcomponents.
+- **services/**: Contains API service files, such as bookingApi.ts for interacting with the backend.
+- **theme/**: Contains theme configuration and customization files.
+- **assets/**: Contains static assets like screenshots.
 - **App.tsx**: The main application component.
 - **main.tsx**: Entry point of the React application.
 - **vite.config.ts**: Configuration file for Vite.
@@ -144,7 +152,7 @@ technician-booking-frontend/
 
 Contributions are welcome! Please follow these steps to contribute:
 
-1. **Fork the Repository**
+1. **Fork the Repository** 
 
 2. **Create a Feature Branch**
 
@@ -155,14 +163,14 @@ Contributions are welcome! Please follow these steps to contribute:
 3. **Commit Your Changes**
 
    ```bash
-   git commit -m "Add Your Feature"
+   git commit -m "Add Your Feature"  
    ```
 
-4. **Push to the Branch**
+4. **Push to the Branch** 
 
    ```bash
    git push origin feature/YourFeatureName
-   ```
+   ``` 
 
 5. **Open a Pull Request**
 
@@ -170,12 +178,14 @@ Please ensure your code adheres to the project's coding standards and passes all
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). 
+This project is licensed under the [MIT License](LICENSE).
 
 ## Contact
 
 **Ericson Willians**  
-Email: [ericsonwillians@protonmail.com](mailto:ericsonwillians@protonmail.com)  
+Email: [ericsonwillians@protonmail.com](mailto:ericsonwillians@protonmail.com)
 GitHub: [@ericsonwillians](https://github.com/ericsonwillians)
 
 ---
+
+Let me know if you have any other questions or need further assistance with your project!
