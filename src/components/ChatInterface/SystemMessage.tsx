@@ -1,262 +1,197 @@
-// src/components/ChatInterface/SystemMessage.tsx
-
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
+import { 
+  Box, 
+  Card, 
+  CardContent, 
+  Grid, 
+  Typography, 
   Chip,
-  useTheme,
-  alpha,
+  IconButton,
+  Tooltip,
+  Fade,
+  Slide,
 } from '@mui/material';
-import ErrorIcon from '@mui/icons-material/Error';
-import InfoIcon from '@mui/icons-material/Info';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import WarningIcon from '@mui/icons-material/Warning';
-import { CommandResult } from '../../services/bookingApi';
-import { BookingEntry } from './BookingEntry';
+import {
+  Info as InfoIcon,
+  CheckCircle as SuccessIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
+  ContentCopy,
+  CalendarToday,
+  Person,
+  WorkOutline,
+  Schedule
+} from '@mui/icons-material';
+import { format, parseISO } from 'date-fns';
 
-type MessageType = 'info' | 'success' | 'error' | 'warning';
+const typeIcons = {
+  info: <InfoIcon fontSize="small" />,
+  success: <SuccessIcon fontSize="small" />,
+  warning: <WarningIcon fontSize="small" />,
+  error: <ErrorIcon fontSize="small" />,
+};
+
+const getStatusColor = (type: 'info' | 'success' | 'error' | 'warning') => {
+  const colors = {
+    info: '#2196f3',
+    success: '#4caf50',
+    warning: '#ff9800',
+    error: '#f44336'
+  };
+  return colors[type];
+};
 
 interface SystemMessageProps {
-  content: CommandResult | string;
+  content: {
+    intent: string;
+    message: string;
+    bookings?: any[];
+    booking?: any;
+  };
   timestamp: Date;
-  type?: MessageType; // optional, defaults to 'info'
+  type: 'info' | 'success' | 'error' | 'warning';
 }
 
-interface MessageContainerProps {
-  children: React.ReactNode;
-  type: MessageType;
-}
+const SystemMessage = React.forwardRef<HTMLDivElement, SystemMessageProps>(
+  ({ content, timestamp, type }, ref) => {
+    const handleCopy = (text: string) => {
+      navigator.clipboard.writeText(text).catch(console.error);
+    };
 
-/**
- * A container that visually changes according to the message type.
- * Using alpha-blended colors for a more subtle yet distinct look.
- */
-const MessageContainer: React.FC<MessageContainerProps> = ({ children, type }) => {
-  const theme = useTheme();
+    const renderBookingCard = (booking: any, index: number) => {
+      if (!booking) return null;
 
-  let bgColor = '';
-  let borderColor = '';
+      const startTime = booking.start_time ? parseISO(booking.start_time) : null;
+      const endTime = booking.end_time ? parseISO(booking.end_time) : null;
+      const bookingStatus = booking.status?.toLowerCase() === 'cancelled' ? 'error' : 'success';
 
-  // Subtle alpha-based backgrounds & borders (tweak these as needed):
-  switch (type) {
-    case 'error':
-      bgColor = alpha(theme.palette.error.main, 0.07); 
-      borderColor = alpha(theme.palette.error.main, 0.2);
-      break;
-    case 'success':
-      bgColor = alpha(theme.palette.success.main, 0.07);
-      borderColor = alpha(theme.palette.success.main, 0.2);
-      break;
-    case 'warning':
-      bgColor = alpha(theme.palette.warning.main, 0.07);
-      borderColor = alpha(theme.palette.warning.main, 0.2);
-      break;
-    case 'info':
-    default:
-      bgColor = alpha(theme.palette.info.main, 0.07);
-      borderColor = alpha(theme.palette.info.main, 0.2);
-      break;
-  }
+      return (
+        <Grid item xs={12} sm={6} lg={4} key={index}>
+          <Slide direction="up" in timeout={(index + 1) * 150}>
+            <Card sx={{
+              height: '100%',
+              borderLeft: `4px solid ${getStatusColor(type)}`,
+              backgroundColor: 'background.paper',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: 4,
+              },
+            }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                  <Chip
+                    label={`Booking #${booking.id}`}
+                    size="small"
+                    color={type}
+                    icon={<ContentCopy fontSize="inherit" />}
+                    onClick={() => handleCopy(booking.id)}
+                  />
+                  <Tooltip title="Copy booking details">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleCopy(JSON.stringify(booking, null, 2))}
+                      >
+                        <ContentCopy fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '85%' }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          backgroundColor: bgColor,
-          border: `1px solid ${borderColor}`,
-          borderRadius: 2,
-          width: '100%',
-        }}
-      >
-        {children}
-      </Paper>
-    </Box>
-  );
-};
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Person fontSize="small" color="action" />
+                  <Typography variant="body2">{booking.technician_name ?? 'Unknown Technician'}</Typography>
+                </Box>
 
-const getIcon = (type: MessageType) => {
-  switch (type) {
-    case 'success':
-      return <CheckCircleIcon sx={{ color: 'success.main' }} />;
-    case 'error':
-      return <ErrorIcon sx={{ color: 'error.main' }} />;
-    case 'warning':
-      return <WarningIcon sx={{ color: 'warning.main' }} />;
-    case 'info':
-    default:
-      return <InfoIcon sx={{ color: 'info.main' }} />;
-  }
-};
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <WorkOutline fontSize="small" color="action" />
+                  <Typography variant="body2">{booking.profession ?? 'Unknown Profession'}</Typography>
+                </Box>
 
-/**
- * Recursively renders JSON data with indentation, emphasizing in red for errors.
- */
-const renderJsonRecursively = (data: any, depth = 0): React.ReactNode => {
-  // If it's null or not an object/array, just render as string
-  if (data === null || typeof data !== 'object') {
-    return (
-      <Typography
-        variant="body2"
-        sx={{ color: 'error.main', ml: depth * 2, whiteSpace: 'pre-wrap' }}
-      >
-        {String(data)}
-      </Typography>
-    );
-  }
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Schedule fontSize="small" color="action" />
+                  <Typography variant="body2">
+                    {startTime ? format(startTime, 'MMM dd, yyyy HH:mm') : 'N/A'} -{' '}
+                    {endTime ? format(endTime, 'HH:mm') : 'N/A'}
+                  </Typography>
+                </Box>
 
-  // If it's an array, map over items
-  if (Array.isArray(data)) {
-    return data.map((item, idx) => (
-      <Box key={idx} sx={{ ml: depth * 2 }}>
-        {renderJsonRecursively(item, depth + 1)}
-      </Box>
-    ));
-  }
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Chip
+                    label={booking.status ?? 'Confirmed'}
+                    size="small"
+                    color={bookingStatus}
+                    variant="outlined"
+                  />
+                  <CalendarToday fontSize="small" color="action" />
+                </Box>
+              </CardContent>
+            </Card>
+          </Slide>
+        </Grid>
+      );
+    };
 
-  // Otherwise it's an object; iterate over entries
-  return Object.entries(data).map(([key, value]) => (
-    <Box key={key} sx={{ ml: depth * 2, mb: 0.5 }}>
-      <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 500 }}>
-        • <strong>{key}</strong>
-      </Typography>
-      {renderJsonRecursively(value, depth + 1)}
-    </Box>
-  ));
-};
-
-/**
- * Attempt to parse a string as JSON. If valid, recursively render it.
- * If parsing fails, we simply display the raw string in red.
- */
-const renderErrorJson = (rawString: string) => {
-  try {
-    const parsed = JSON.parse(rawString);
-    return (
-      <Box sx={{ mt: 1 }}>
-        {renderJsonRecursively(parsed, 0)}
-      </Box>
-    );
-  } catch {
-    // Fallback to raw text
-    return (
-      <Typography
-        variant="body2"
-        sx={{ color: 'error.main', mt: 1, fontWeight: 500, whiteSpace: 'pre-wrap' }}
-      >
-        {rawString}
-      </Typography>
-    );
-  }
-};
-
-export const SystemMessage: React.FC<SystemMessageProps> = ({
-  content,
-  timestamp,
-  type = 'info',
-}) => {
-  const renderContent = () => {
-    // 1) If it's a plain string
-    if (typeof content === 'string') {
-      if (type === 'error') {
-        // Display as error with JSON parsing
-        return (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {getIcon('error')}
-              <Typography variant="subtitle1" sx={{ color: 'error.main', fontWeight: 700 }}>
-                Error
+    if (content.intent === 'booking_info' && Array.isArray(content.bookings) && content.bookings.length > 0) {
+      return (
+        <Box ref={ref} sx={{ mb: 2, width: '100%' }}>
+          <Fade in>
+            <Box sx={{ mb: 2 }}>
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1, 
+                  mb: 1.5, 
+                  color: getStatusColor(type)
+                }}
+              >
+                {typeIcons[type]}
+                Booking Details
+              </Typography>
+              <Grid container spacing={2}>
+                {content.bookings.map((booking, index) => renderBookingCard(booking, index))}
+              </Grid>
+              <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'right', color: 'text.secondary' }}>
+                Updated: {format(timestamp, 'MMM dd, yyyy HH:mm')}
               </Typography>
             </Box>
-            {renderErrorJson(content)}
-          </Box>
-        );
-      }
-      // For non-error plain strings
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {getIcon(type)}
-          <Typography
-            sx={{
-              fontWeight: 500,
-              color:
-                type === 'success'
-                  ? 'success.main'
-                  : type === 'warning'
-                  ? 'warning.main'
-                  : 'info.main',
-            }}
-          >
-            {content}
-          </Typography>
+          </Fade>
         </Box>
       );
     }
 
-    // 2) If it's a CommandResult
-    const result = content as CommandResult;
-
     return (
-      <Box>
-        {/* Show the intent if present */}
-        {result.intent && (
-          <Chip
-            label={result.intent.replace('_', ' ').toUpperCase()}
-            size="small"
-            sx={{
-              bgcolor: 'background.paper',
-              color: 'text.primary',
-              fontWeight: 600,
-              mb: 1,
-            }}
-          />
-        )}
-
-        {/* Main message */}
-        {result.message && (
-          <Typography variant="body1" sx={{ fontWeight: 500, mb: 2, color: 'text.primary' }}>
-            {result.message}
+      <Box ref={ref} sx={{ mb: 2, width: '100%', display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+        <Box sx={{ mt: '2px', color: getStatusColor(type), display: 'flex', alignItems: 'center' }}>
+          {typeIcons[type]}
+        </Box>
+        <Box sx={{
+          p: 1.5,
+          borderRadius: 1,
+          backgroundColor: `${getStatusColor(type)}1a`,
+          border: `1px solid ${getStatusColor(type)}33`,
+          position: 'relative',
+          maxWidth: '100%',
+          wordBreak: 'break-word'
+        }}>
+          <Typography variant="body2" component="div">
+            {content.message.split('\n').map((line, index) => (
+              <React.Fragment key={index}>
+                {line}
+                <br />
+              </React.Fragment>
+            ))}
           </Typography>
-        )}
-
-        {/* Single booking */}
-        {result.booking && <BookingEntry booking={result.booking} />}
-
-        {/* Multiple bookings */}
-        {result.bookings && result.bookings.length > 0 && (
-          <Box sx={{ mt: 1 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {result.bookings.map((booking) => (
-                <BookingEntry key={booking.id} booking={booking} />
-              ))}
-            </Box>
-          </Box>
-        )}
+          <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}>
+            {format(timestamp, 'HH:mm')}
+          </Typography>
+        </Box>
       </Box>
     );
-  };
-
-  return (
-    <Box sx={{ mb: 2 }}>
-      <MessageContainer type={type}>{renderContent()}</MessageContainer>
-
-      {/* Timestamp */}
-      <Typography
-        variant="caption"
-        sx={{
-          ml: 1,
-          mt: 0.5,
-          display: 'block',
-          color: 'text.secondary',
-        }}
-      >
-        {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </Typography>
-    </Box>
-  );
-};
+  }
+);
 
 export default SystemMessage;

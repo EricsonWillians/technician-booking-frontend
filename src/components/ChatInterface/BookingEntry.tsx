@@ -1,6 +1,4 @@
-// src/components/ChatInterface/BookingEntry.tsx
-
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -22,10 +20,8 @@ interface BookingEntryProps {
   booking: Booking;
 }
 
-// Define possible message types aligning with MUI's Chip color options
 type MessageType = 'info' | 'success' | 'error' | 'warning';
 
-// Define the structure of status information
 interface StatusInfo {
   label: string;
   color: MessageType;
@@ -35,7 +31,7 @@ interface StatusInfo {
 export const BookingEntry: React.FC<BookingEntryProps> = ({ booking }) => {
   const theme = useTheme();
 
-  const getStatusInfo = (booking: Booking): StatusInfo => {
+  const getStatusInfo = useMemo(() => {
     const now = new Date();
     const startTime = new Date(booking.start_time);
     const endTime = new Date(booking.end_time);
@@ -59,10 +55,10 @@ export const BookingEntry: React.FC<BookingEntryProps> = ({ booking }) => {
         bgColor: alpha(theme.palette.warning.main, 0.1),
       };
     }
-  };
+  }, [booking.start_time, booking.end_time, theme]);
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('default', {
+  const formatDateTime = (dateString: string) =>
+    new Date(dateString).toLocaleString('default', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -70,21 +66,18 @@ export const BookingEntry: React.FC<BookingEntryProps> = ({ booking }) => {
       minute: '2-digit',
       hour12: true,
     });
-  };
-
-  const status = getStatusInfo(booking);
 
   return (
     <Card
-      elevation={0}
+      elevation={1}
       sx={{
         width: '100%',
-        bgcolor: status.bgColor,
+        bgcolor: getStatusInfo.bgColor,
         border: `1px solid ${theme.palette.divider}`,
         transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: theme.shadows[2],
+          transform: 'scale(1.02)',
+          boxShadow: theme.shadows[3],
         },
         borderRadius: 2,
       }}
@@ -92,27 +85,21 @@ export const BookingEntry: React.FC<BookingEntryProps> = ({ booking }) => {
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
           <Chip
-            label={status.label}
-            color={status.color}
+            label={getStatusInfo.label}
+            color={getStatusInfo.color}
             size="small"
             sx={{
               fontWeight: 600,
               fontSize: '0.75rem',
             }}
           />
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 500,
-            }}
-          >
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
             ID: {booking.id}
           </Typography>
         </Stack>
 
         <Stack spacing={1.5}>
-          {/* Customer Information */}
+          {/* Customer Info */}
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <PersonIcon sx={{ color: theme.palette.primary.main, fontSize: 20 }} />
             <Box>
@@ -128,7 +115,7 @@ export const BookingEntry: React.FC<BookingEntryProps> = ({ booking }) => {
             </Box>
           </Stack>
 
-          {/* Technician Information */}
+          {/* Technician Info */}
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <WorkIcon sx={{ color: theme.palette.secondary.main, fontSize: 20 }} />
             <Box>
@@ -144,7 +131,7 @@ export const BookingEntry: React.FC<BookingEntryProps> = ({ booking }) => {
             </Box>
           </Stack>
 
-          {/* Schedule Information */}
+          {/* Schedule Info */}
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <AccessTimeIcon sx={{ color: theme.palette.grey[600], fontSize: 20 }} />
             <Box>

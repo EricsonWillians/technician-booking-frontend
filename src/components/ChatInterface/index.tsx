@@ -1,6 +1,4 @@
-// src/components/ChatInterface/index.tsx
-
-import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, KeyboardEvent, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -9,20 +7,33 @@ import {
   Typography,
   LinearProgress,
   useTheme,
-  useMediaQuery,
   Tooltip,
   Divider,
+  Slide,
+  Collapse,
+  styled,
+  keyframes,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { CommandResult, BookingApiError, processCommand } from '../../services/bookingApi';
+import { CommandResult, BookingApiError, processCommand, getAllBookings } from '../../services/bookingApi';
 import SystemMessage from './SystemMessage';
 import UserMessage from './UserMessage';
-import { alpha } from '@mui/material/styles'; // Correctly import alpha
+import { alpha } from '@mui/material/styles';
 
-// Define possible message types
+const pulse = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+`;
+
+const AnimatedSendButton = styled(IconButton)(({ theme }) => ({
+  '&:hover': {
+    animation: `${pulse} 0.5s ${theme?.transitions?.easing?.easeInOut ?? 'ease-in-out'}`,
+  },
+}));
+
 type MessageType = 'info' | 'success' | 'error' | 'warning';
 
-// Define separate interfaces for user and system messages
 interface UserChatMessage {
   id: string;
   role: 'user';
@@ -33,38 +44,47 @@ interface UserChatMessage {
 interface SystemChatMessage {
   id: string;
   role: 'system';
-  content: CommandResult;
+  content: {
+    intent: string;
+    message: string;
+    booking?: any;
+    bookings?: any[];
+  };
   timestamp: Date;
   type: MessageType;
 }
 
 type ChatMessage = UserChatMessage | SystemChatMessage;
 
-export interface ChatInterfaceProps {
+interface ChatInterfaceProps {
   className?: string;
   placeholder?: string;
   initialMessages?: ChatMessage[];
+  onAnalysisUpdate?: (data: any) => void;
 }
 
 export default function ChatInterface({
   className,
   placeholder = "Type your message...",
-  initialMessages = []
+  initialMessages = [],
+  onAnalysisUpdate
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Ref to prevent adding welcome message multiple times
-  const welcomeMessageAdded = useRef(false);
+  const addMessage = useCallback((message: ChatMessage) => {
+    setMessages(prev => [...prev, message]);
+  }, []);
+
+  const welcomeMessageShown = useRef(false);
 
   useEffect(() => {
-    // Add welcome message on component mount only once
-    if (!welcomeMessageAdded.current) {
-      const welcomeMessage: SystemChatMessage = {
+    if (!welcomeMessageShown.current) {
+      addMessage({
         id: Date.now().toString(),
         role: 'system',
         content: {
@@ -73,15 +93,53 @@ export default function ChatInterface({
         },
         timestamp: new Date(),
         type: 'info'
-      };
-      setMessages(prev => [...prev, welcomeMessage]);
-      welcomeMessageAdded.current = true;
+      });
+      welcomeMessageShown.current = true;
     }
-  }, []);
+  }, [addMessage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const parseBookingsFromMessage = (message: string): any[] => {
+    const bookings: any[] = [];
+    const lines = message.split('\n');
+    
+    lines.forEach(line => {
+      if (line.startsWith('- ID:')) {
+        const booking: any = {};
+        const parts = line.substring(2).split(',').map(part => part.trim());
+        
+        parts.forEach(part => {
+          if (part.startsWith('ID:')) booking.id = part.split(':')[1].trim();
+          if (part.startsWith('Technician:')) booking.technician_name = part.split(':')[1].trim();
+          if (part.startsWith('Profession:')) booking.profession = part.split(':')[1].trim();
+          if (part.startsWith('Start:')) {
+            const startStr = part.split(':').slice(1).join(':').trim();
+            booking.start_time = new Date(startStr).toISOString();
+          }
+        });
+        
+        if (booking.id) bookings.push(booking);
+      }
+    });
+    
+    return bookings;
+  };
+
+  const updateAnalytics = useCallback(async (result: CommandResult) => {
+    if (!onAnalysisUpdate) return;
+    try {
+      const bookings = await getAllBookings();
+      onAnalysisUpdate({
+        bookings,
+        nlpAnalysis: result.analysis || []
+      });
+    } catch (error) {
+      console.error("Error updating analytics:", error);
+    }
+  }, [onAnalysisUpdate]);
 
   const handleSend = async () => {
     const trimmed = inputValue.trim();
@@ -94,75 +152,53 @@ export default function ChatInterface({
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, newUserMessage]);
+    addMessage(newUserMessage);
     setInputValue('');
     setIsLoading(true);
+    inputRef.current?.focus();
 
     try {
-      const result: CommandResult = await processCommand(trimmed);
-      const messageType: MessageType = determineMessageType(result.intent);
-
-      const newSystemMessage: SystemChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'system',
-        content: result,
-        timestamp: new Date(),
-        type: messageType
-      };
-      setMessages(prev => [...prev, newSystemMessage]);
-
-      // Handle additional data like bookings if necessary
-      if (result.bookings && result.bookings.length > 0) {
-        result.bookings.forEach((booking) => {
-          const bookingMessage: SystemChatMessage = {
-            id: (Date.now() + 2).toString(),
-            role: 'system',
-            content: {
-              intent: 'booking_info',
-              message: `Booking ID: ${booking.id} for ${booking.profession} with ${booking.technician_name} scheduled from ${new Date(booking.start_time).toLocaleString()} to ${new Date(booking.end_time).toLocaleString()}.`
-            },
-            timestamp: new Date(),
-            type: 'info'
-          };
-          setMessages(prev => [...prev, bookingMessage]);
-        });
-      }
-
-      if (result.booking) {
-        const booking = result.booking;
-        const bookingMessage: SystemChatMessage = {
-          id: (Date.now() + 3).toString(),
+      const result = await processCommand(trimmed);
+      await updateAnalytics(result);
+      
+      if (result.intent === 'list_bookings' && result.message.includes('- ID:')) {
+        const bookings = parseBookingsFromMessage(result.message);
+        addMessage({
+          id: Date.now().toString(),
           role: 'system',
           content: {
-            intent: 'booking_created',
-            message: `Booking created successfully! ID: ${booking.id} for ${booking.profession} with ${booking.technician_name} from ${new Date(booking.start_time).toLocaleString()} to ${new Date(booking.end_time).toLocaleString()}.`
+            intent: 'booking_info',
+            message: "Here are your bookings:",
+            bookings
           },
           timestamp: new Date(),
-          type: 'success'
-        };
-        setMessages(prev => [...prev, bookingMessage]);
+          type: 'info'
+        });
+      } else {
+        addMessage({
+          id: Date.now().toString(),
+          role: 'system',
+          content: {
+            intent: result.intent,
+            message: result.message,
+            bookings: result.bookings
+          },
+          timestamp: new Date(),
+          type: determineMessageType(result.intent)
+        });
       }
-
     } catch (err) {
-      const errorContent = err instanceof BookingApiError
-        ? {
-            intent: 'error',
-            message: err.message.replace('API request failed: ', '')
-          }
-        : {
-            intent: 'error',
-            message: 'An unexpected error occurred. Please try again later.'
-          };
-
-      const errorMessage: SystemChatMessage = {
-        id: (Date.now() + 4).toString(),
+      console.error("Error processing command:", err);
+      addMessage({
+        id: Date.now().toString(),
         role: 'system',
-        content: errorContent,
+        content: {
+          intent: 'error',
+          message: err instanceof BookingApiError ? err.message.replace('API request failed: ', '') : 'An unexpected error occurred.'
+        },
         timestamp: new Date(),
         type: 'error'
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
+      });
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +211,6 @@ export default function ChatInterface({
     }
   };
 
-  // Helper function to determine message type based on intent
   const determineMessageType = (intent: string): MessageType => {
     if (intent.includes('error')) return 'error';
     if (intent.includes('success')) return 'success';
@@ -184,108 +219,58 @@ export default function ChatInterface({
   };
 
   return (
-    <Paper
-      elevation={3}
-      className={className}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        overflow: 'hidden',
-        bgcolor: 'background.paper',
-        borderRadius: 2
-      }}
-    >
-      {/* Header */}
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6" component="h2" sx={{ color: 'text.secondary' }}>
-          Chat Interface
-        </Typography>
+    <Paper className={className} sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%', 
+      overflow: 'hidden', 
+      bgcolor: 'background.default', 
+      borderRadius: 4 
+    }}>
+      <Box sx={{ 
+        p: 2, 
+        borderBottom: 1, 
+        borderColor: 'divider', 
+        bgcolor: theme.palette?.primary?.main ? alpha(theme.palette.primary.main, 0.9) : 'transparent', 
+        color: 'white' 
+      }}>
+        <Typography variant="h6">Technician Booking Assistant</Typography>
       </Box>
 
-      {/* Messages Area */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          overflowY: 'auto',
-          p: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          bgcolor: 'background.default'
-        }}
-      >
-        {messages.map((message) => (
-          <Box key={message.id}>
-            {message.role === 'user' ? (
-              <UserMessage content={message.content as string} timestamp={message.timestamp} />
-            ) : (
-              <SystemMessage
-                content={message.content}
-                timestamp={message.timestamp}
-                type={message.type}
-              />
-            )}
-          </Box>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {messages.map(message => (
+          <Slide key={message.id} in direction={message.role === 'user' ? 'left' : 'right'}>
+            {message.role === 'user' 
+              ? <UserMessage content={message.content} timestamp={message.timestamp} /> 
+              : <SystemMessage content={message.content} timestamp={message.timestamp} type={message.type} />}
+          </Slide>
         ))}
         <div ref={messagesEndRef} />
       </Box>
 
-      {/* Loading Indicator */}
-      {isLoading && <LinearProgress />}
+      <Collapse in={isLoading}><LinearProgress /></Collapse>
 
-      {/* Input Area */}
       <Divider />
-
-      <Box
-        component="form"
-        sx={{
-          p: 2,
-          bgcolor: 'background.paper',
-          borderTop: 1,
-          borderColor: 'divider'
-        }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          void handleSend();
-        }}
-      >
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            fullWidth
-            placeholder={placeholder}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            multiline
-            maxRows={3}
-            size="small"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'background.default'
-              }
-            }}
-            inputProps={{
-              'aria-label': 'Type your message',
-            }}
-          />
-          <Tooltip title="Send message">
-            <IconButton
-              color="primary"
-              onClick={() => void handleSend()}
-              disabled={isLoading}
-              size="large"
-              sx={{
-                alignSelf: 'flex-end',
-                mb: isMobile ? 1 : 0
-              }}
-              aria-label="Send message"
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <TextField 
+          fullWidth 
+          placeholder={placeholder} 
+          value={inputValue} 
+          onChange={(e) => setInputValue(e.target.value)} 
+          onKeyDown={handleKeyDown} 
+          inputRef={inputRef} 
+        />
+        <Tooltip title="Send">
+          <span>
+            <AnimatedSendButton 
+              color="primary" 
+              onClick={handleSend} 
+              disabled={isLoading || !inputValue.trim()}
             >
               <SendIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+            </AnimatedSendButton>
+          </span>
+        </Tooltip>
       </Box>
     </Paper>
   );
